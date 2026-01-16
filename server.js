@@ -174,6 +174,17 @@ app.get('/api/reviews', async (req, res) => {
     res.json(reviews);
 });
 
+// LECTURE DES CATEGORIES
+app.get('/api/categories', async (req, res) => {
+    const cat = await Categorie.find();
+    res.json(cat);
+});
+
+// LECTURE DES UTILISATEURS
+app.get('/api/users', async (req, res) => {
+    const user = await User.find();
+    res.json(user);
+});
 
 // --- SUPPRIMER (DELETE) ---
 

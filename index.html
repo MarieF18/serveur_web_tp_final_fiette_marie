@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Garage Pro</title>
+    <style>
+        body { font-family: sans-serif; display: flex; gap: 30px; padding: 20px; background: #f0f2f5; }
+        .card { background: white; padding: 15px; margin-bottom: 10px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        form { background: #e2e2e2; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
+        input, select, button { padding: 10px; margin: 5px; }
+        .btn { background: #ff4444; color: white; border: none; cursor: pointer; border-radius: 5px; }
+        .col { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .badge { padding: 4px 8px; border-radius: 4px; color: white; font-size: 0.8em; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
+    </style>
+</head>
+<body>
+
+    <div class="col" style="width: 45%;">
+        <h2>➕ Ajouter un Produit</h2>
+        <form id="pForm">
+            <input type="text" id="nom" placeholder="Nom du produit" required><br><br>
+            <input type="number" id="stock" placeholder="Quantité en Stock" required><br><br>
+            <input type="number" id="prix" placeholder="Prix d'achat (€)" required><br><br>
+            <select id="categorieSelect"><option>Chargement des categories...</option></select><br><br>
+            <button class="btn" type="submit">Enregistrer</button>
+        </form>
+        <h2> Table des produits </h2>
+        <table id="pTable">
+            <thead>
+                <tr>
+                    <th>Nom</th>
+                    <th>Prix</th>
+                    <th>Stock</th>
+                    <th>Categorie</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <div class="col" style="flex-grow: 1;">
+        <h2>📑 Liste des Produits</h2>
+        <div id="listeProduits"></div>
+    </div>
+
+    <script>
+        const API = "http://localhost:3000/api";
+
+        async function init() {
+            // Charger les categories dans le menu déroulant
+            const resC = await fetch(`${API}/categories`);
+            const categories = await resC.json();
+            document.getElementById('categorieSelect').innerHTML = categories.map(c => 
+                `<option value="${c._id}">${c.nom}</option>`
+            ).join('');
+
+            loadTableProduits();
+        }
+
+
+
+        // Mise en place du Dashboard Admin
+
+        async function loadTableProduits() {
+            const res = await fetch(`${API}/products`);
+            const prod = await res.json();
+            const tbody = document.querySelector('#pTable tbody');
+            let total = 0;
+
+            tbody.innerHTML = prod.map(p => {
+                return `
+                    <tr>
+                        <td><strong>${p.nom} </strong></td>
+                        <td> ${p.prix} €</td>
+                        <td> ${p.stock} </td>
+                        <td> ${p.categorie.nom}</td>
+                        <td>
+                            <button class="btn" onclick="deleteProd('${p._id}')">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+            loadData();
+        }
+
+        async function deleteProd(id) {
+            const res = await fetch(`${API}/products/${id}`, { method: 'DELETE' });
+            const data = await res.json();
+            
+            if (res.status === 403) alert(data.message);
+            else loadTableProduits();
+        }
+
+        document.getElementById('pForm').onsubmit = async (e) => {
+            e.preventDefault();
+            const body = {
+                nom: document.getElementById('nom').value,
+                prix: document.getElementById('prix').value,
+                stock: document.getElementById('stock').value,
+                categorie: document.getElementById('categorieSelect').value
+            };
+            const res = await fetch(`${API}/products`, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(body)
+            });
+            if (res.ok) { e.target.reset(); loadTableProduits(); }
+            else { const err = await res.json(); alert(err.message); }
+        };
+
+        // -----------------------------------------------------------------------
+
+        //Mise en place de la boutique client
+
+         // Charger les produits et les stats
+        async function loadData() {
+            // Liste des produits
+            const res = await fetch(`${API}/products`);
+            const produits = await res.json();
+            const container = document.getElementById('listeProduits');
+            container.innerHTML = "";
+
+            produits.forEach((p) => {
+                container.innerHTML += `
+                    <div class="card">
+                        <div>
+                            <strong>${p.nom}</strong> (${p.categorie.nom})<br>
+                            <small>${p.prix}€ - qté: ${p.stock}</small>
+                        </div>
+                        <button class="btn" onclick="createReview('${p._id}')">✍️</button>
+                        <button class="btn" onclick="viewReview('${p._id}')">⭐</button>
+                    </div>
+                `;
+            });
+        }
+
+        // -----------------------------------------------------------------------
+
+        // Mise en place de l'espace Interaction 
+
+
+        init();
+    </script>
+</body>
+</html>
